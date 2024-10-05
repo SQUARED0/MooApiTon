@@ -1,33 +1,20 @@
-const express = require('express');
-const { beginCell, toNano, Address } = require('@ton/ton');
+const { Address, beginCell, toNano } = TonWeb.utils;
 
-const app = express();
-const port = process.env.PORT || 3000;
+async function generateJettonPayload(recipient, sender) {
+    const payloadCell = beginCell()
+      .storeUint(0xf8a7ea5, 32)  // Opcode Jetton transfer
+      .storeUint(0, 64)          // Query ID
+      .storeCoins(toNano(10))    // Кількість Jetton
+      .storeAddress(new Address(recipient)) // Адреса отримувача
+      .storeAddress(new Address(sender))    // Адреса відправника
+      .storeBit(0)              // Немає додаткового payload
+      .storeCoins(toNano(0.05)) // Forward amount
+      .endCell();
 
-app.get('/transfer', (req, res) => {
-    const Wallet_DST = req.query.wallet_dst; // Expected as a query parameter
-    const Wallet_SRC = req.query.wallet_src; // Expected as a query parameter
+    return payloadCell.toBoc().toString('base64'); // Повертає payload у форматі base64
+}
 
-    try {
-        const body = beginCell()
-            .storeUint(0xf8a7ea5, 32)
-            .storeUint(0, 64)
-            .storeCoins(toNano("0.001"))
-            .storeAddress(Address.parse(Wallet_DST))
-            .storeAddress(Address.parse(Wallet_SRC))
-            .storeUint(0, 1)
-            .storeCoins(toNano("0.05"))
-            .storeUint(0,1)
-            .endCell()
-            .toBoc()
-            .toString("base64");
-
-        res.send({ result: body });
-    } catch (error) {
-        res.status(500).send({ error: error.message });
-    }
-});
-
-app.listen(port, () => {
-    console.log(`Server running on http://localhost:${port}`);
-});
+// Виклик функції для прикладу
+const recipient = "0:123..."; // заміни на справжню адресу
+const sender = "0:abc...";
+generateJettonPayload(recipient, sender).then(payload => console.log("Generated Payload:", payload));
