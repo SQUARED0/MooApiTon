@@ -1,6 +1,26 @@
+const express = require('express');
+const TonWeb = require('tonweb');
+
+// Ініціалізуй TonWeb
 const { Address, beginCell, toNano } = TonWeb.utils;
 
-async function generateJettonPayload(recipient, sender) {
+// Створи сервер
+const app = express();
+
+// Middlewares
+app.use(express.json());
+
+// Маршрут для генерації Jetton payload
+app.post('/generate-payload', async (req, res) => {
+  try {
+    const { recipient, sender } = req.body; // Отримуємо адреси з тіла запиту
+
+    // Перевірка, що адреси не порожні
+    if (!recipient || !sender) {
+      return res.status(400).json({ error: "Recipient and sender addresses are required" });
+    }
+
+    // Генерація payload
     const payloadCell = beginCell()
       .storeUint(0xf8a7ea5, 32)  // Opcode Jetton transfer
       .storeUint(0, 64)          // Query ID
@@ -11,10 +31,17 @@ async function generateJettonPayload(recipient, sender) {
       .storeCoins(toNano(0.05)) // Forward amount
       .endCell();
 
-    return payloadCell.toBoc().toString('base64'); // Повертає payload у форматі base64
-}
+    const payloadBase64 = payloadCell.toBoc().toString('base64'); // Згенерований payload
 
-// Виклик функції для прикладу
-const recipient = "0:123..."; // заміни на справжню адресу
-const sender = "0:abc...";
-generateJettonPayload(recipient, sender).then(payload => console.log("Generated Payload:", payload));
+    // Повертаємо payload у відповідь
+    res.json({ payload: payloadBase64 });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Запуск сервера на порту 3000
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => {
+  console.log(`Server is running on port ${PORT}`);
+});
